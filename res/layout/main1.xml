@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/bigpage"         android:layout_width="fill_parent"
+              android:layout_height="fill_parent" android:orientation="vertical" >
+
+<com.example.android.CrumbView
+  xmlns:app="http://schemas.android.com/apk/res/com.example.android"
+  android:id="@+id/crumbView" android:gravity="left"
+  android:layout_width="match_parent" android:layout_height="70dp"
+  android:layout_weight="1" >
+  
+  <com.example.android.BreadCrumb       style="@style/crumb_style"
+  xmlns:app="http://schemas.android.com/apk/res/com.example.android"
+  android:text="@string/testCrumb"    android:id="@+id/testCrumb1" />
+    
+  <com.example.android.BreadCrumb       style="@style/crumb_style"
+  xmlns:app="http://schemas.android.com/apk/res/com.example.android"
+  android:text="@string/testCrumb"    android:id="@+id/testCrumb2" />
+  
+</com.example.android.CrumbView>
+    
+<com.example.android.DragableSpace
+    xmlns:app="http://schemas.android.com/apk/res/com.example.android"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/space" android:layout_width="match_parent"
+    android:layout_height="match_parent"  android:layout_weight="1"
+    app:default_screen="0" app:numColumns="2" app:numRows="2" app:background="@drawable/blackwood1">
+</com.example.android.DragableSpace>
+</LinearLayout>

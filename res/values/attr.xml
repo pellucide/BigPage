@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="DragableSpace">
+        <attr name="default_screen" format="integer"/>
+        <attr name="numColumns" format="integer"/>
+        <attr name="numRows" format="integer"/>
+        <attr name="background" format="reference|color"/>
+    </declare-styleable>
+    <declare-styleable name="CrumbView">
+        <attr name="maxDepth" format="integer"/>
+        <attr name="scrollable" format="boolean" />
+    </declare-styleable>
+</resources>
