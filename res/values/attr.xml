@@ -6,6 +6,8 @@
         <attr name="numRows" format="integer"/>
         <attr name="background" format="reference|color"/>
     </declare-styleable>
+    <declare-styleable name="DragableSpace1">
+    </declare-styleable>
     <declare-styleable name="CrumbView">
         <attr name="maxDepth" format="integer"/>
         <attr name="scrollable" format="boolean" />

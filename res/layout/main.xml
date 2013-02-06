@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
               android:id="@+id/bigpage"         android:layout_width="fill_parent"
               android:layout_height="fill_parent" android:orientation="vertical" >
 
-<com.example.android.BreadCrumb       style="@style/button_style"
-  xmlns:app="http://schemas.android.com/apk/res/com.example.android"
+    <!--
+<com.appcumen.BreadCrumb       style="@style/button_style"
+  xmlns:app="http://schemas.android.com/apk/res/com.appcumen"
   android:text="@string/testCrumb"    android:id="@+id/testCrumb"
   android:layout_width="match_parent" android:layout_height="match_parent"
   android:layout_weight="6"           android:layout_margin="0dp"
   android:layout_marginRight="0dp"    android:textSize="15dp" /> 
-    
-<com.example.android.DragableSpace
-    xmlns:app="http://schemas.android.com/apk/res/com.example.android"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+      -->
+<com.appcumen.DragableSpace
     android:id="@+id/space" android:layout_width="fill_parent"
-    android:layout_height="fill_parent"  android:layout_weight="1"
+    android:layout_height="0dp"  android:layout_weight="1"
     app:default_screen="0" app:numColumns="6" app:numRows="4">
-</com.example.android.DragableSpace>
-<!--     <com.example.android.BreadCrumb android:text="testing2"  -->
-<!--                  style="@style/button_small_style" -->
-<!--     android:layout_height="match_parent" -->
-<!--     android:layout_width="match_parent"  -->
-<!--     android:layout_weight="5" -->
-<!--     android:padding="0dp" -->
-<!--     android:layout_margin="0dp" -->
-<!--     android:layout_marginBottom="0dp" -->
-<!--     android:layout_marginRight="0dp" -->
-<!--     /> -->
+</com.appcumen.DragableSpace>
+<!--     <com.appcumen.BreadCrumb android:text="testing2" 
+                  style="@style/button_small_style" 
+     android:layout_height="match_parent" 
+     android:layout_width="match_parent" 
+     android:layout_weight="5" 
+     android:padding="0dp" 
+     android:layout_margin="0dp" 
+     android:layout_marginBottom="0dp" 
+     android:layout_marginRight="0dp" 
+     /> -->
 </LinearLayout>
