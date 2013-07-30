@@ -4,6 +4,7 @@ package com.appcumen;
 import com.appcumen.adapters.BigPageAdapter;
 import com.appcumen.listeners.PageChangeListener;
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.graphics.Bitmap;
@@ -205,7 +206,6 @@ public class DragableSpace1 extends ViewGroup
     private VelocityTracker mVelocityTracker;
     private int mTouchState = TOUCH_STATE_REST;
  
-    Bitmap mBackground;
     private int mScrollX = 0;
     private int mScrollY = 0;
     private int mCurrentRow = -1;
@@ -232,12 +232,12 @@ public class DragableSpace1 extends ViewGroup
 
     private PageChangeListener mChangeListener;
     
-    SparseArray<SparseArray<View>> views = new SparseArray<SparseArray<View>>(10);
-    SparseArray<SparseIntArray> overlapYs = new SparseArray<SparseIntArray>(10);
-    SparseArray<SparseIntArray> overlapXs = new SparseArray<SparseIntArray>(10);
+    SparseArray<SparseArray<View>> views = new SparseArray<SparseArray<View>>(6);
+    SparseArray<SparseIntArray> overlapYs = new SparseArray<SparseIntArray>(6);
+    SparseArray<SparseIntArray> overlapXs = new SparseArray<SparseIntArray>(6);
     
     private float scaleFactor = 1.0f;
-    private float scaleRatio = 0.95f;
+    private float scaleRatio = 1.0f;
     private boolean currentlyZooming = false;
     private float zoomSlop = 0.009f;
     private int mRowBegin;
@@ -413,8 +413,8 @@ public class DragableSpace1 extends ViewGroup
         Log.d(TAG, "initializeViews");
         calculateRowsAndCols(mCurrentCol, mCurrentRow);
        	updateBoundaries(mCurrentRow, mCurrentCol);
-		mBackground = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.green_drops1);
-		LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+       	//Bitmap mBackground = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.green_drops1);
+		//LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mScroller = new Scroller(context);
 		bms = new Bitmap[9];
 		
@@ -428,11 +428,13 @@ public class DragableSpace1 extends ViewGroup
    		this.clearAnimation();
    		this.setAnimation(null);
 
+   		this.setChildrenDrawingCacheEnabled(true);
         setChildrenDrawingOrderEnabled(true);
 		//changeBackground(R.drawable.green_drops1);
     }
     
     private void updateBoundaries(int row, int col) {
+        Log.d(TAG, "updateBoundaries()");
     	if (mAdapter != null) {
     		int leftCount = Math.min(col, mSideBufferX);
     		int rightCount = Math.min(mAdapter.getColCount() - col-1, mSideBufferX);
@@ -477,9 +479,15 @@ public class DragableSpace1 extends ViewGroup
         	return;
 		
         calculateRowsAndCols(posx, posy);
-		populate(posx, posy);		
-        updateBoundaries(posy, posx);
-		if (snapToScreen(posy, posx, 0, 0))
+		if (populate(posx, posy)) {
+			//updateBoundaries has to be called after populate and before requestLayout();
+			updateBoundaries(posy, posx);
+			requestLayout();
+		}
+        else {
+        	updateBoundaries(posy, posx);
+        }
+		if (snapToScreen(posy, posx, 100, 100))
 			invalidate();
 	}
 	
@@ -544,10 +552,10 @@ public class DragableSpace1 extends ViewGroup
 
     
     public void changeAllBackground(int resource) {
-		mBackground = BitmapFactory.decodeResource(getContext().getResources(), resource);
+		Bitmap bg = BitmapFactory.decodeResource(getContext().getResources(), resource);
 		for(int ii=0; ii<mNumRows; ii++) {
 			for (int jj = 0; jj < mNumColumns; jj++) {
-                changeBackground(mBackground, ii,  jj);
+                changeBackground(bg, ii,  jj);
 			}
 		}
     }
@@ -1135,7 +1143,7 @@ public class DragableSpace1 extends ViewGroup
     
     private boolean snapToScreen_old(int row, int column, int velocityX, int velocityY) {        
     	boolean needsInvalidate=false;
-        Log.i(TAG, "snapToScreen-" + row + "," + column);
+        Log.i(TAG, "snapToScreen_old-" + row + "," + column);
         Log.i(TAG, "rowBegin=" + mRowBegin + ",colBegin=" + mColBegin);
         
         int overlapY = 0;
@@ -1176,7 +1184,7 @@ public class DragableSpace1 extends ViewGroup
  
  private boolean snapToScreen_new(int row, int column, int velocityX, int velocityY) {        
     	boolean needsInvalidate=false;
-        //Log.i(TAG, "snapToScreen-" + row + "," + column);
+        Log.i(TAG, "snapToScreen_new-" + row + "," + column);
         //showLayout();
         
         if (mFirstLayout) {
@@ -1200,6 +1208,7 @@ public class DragableSpace1 extends ViewGroup
 		if (mSnapEnabled) {
 			//final View child = getChildAt(row, column);
 			final View child = views.get(row).get(column);
+			//child.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
 			final int newX = child.getLeft();
 			final int newY = child.getTop();
 			final int deltaX = newX - getScrollX();
@@ -1369,7 +1378,7 @@ public class DragableSpace1 extends ViewGroup
 		for (int row = mRowBegin; row <= mRowEnd; row++) {
 			SparseIntArray overlapYRow =  overlapYs.get(row);
 			if (overlapYRow == null) {
-				overlapYRow =  new SparseIntArray(10);
+				overlapYRow =  new SparseIntArray(6);
 				overlapYs.put(row, overlapYRow);
 			}
 				
@@ -1447,18 +1456,19 @@ public class DragableSpace1 extends ViewGroup
  			childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
  			//thisChildLeft=Math.max(0, thisChildLeft);
  			//thisChildTop=Math.max(0, thisChildTop);
- 			child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 			if (child.getVisibility() != View.GONE) 
+ 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
 
  			col = mCurrentCol+1;
  			for (; col<=mColEnd; col++) {
  				child = getChildAt(row, col);
  				childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  				childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 				thisChildLeft = getChildAt(row, col-1).getLeft() +
- 						(childWidth - (int)(scaleRatio *  mAdapter.getOverlapWithPrevX(child, col, row)));
+ 				thisChildLeft = getChildAt(row, col-1).getLeft() + (childWidth - mAdapter.getOverlapWithPrevX(child, col, row));
  				//thisChildLeft=Math.max(0, thisChildLeft);
  				//thisChildTop=Math.max(0, thisChildTop);
- 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 				if (child.getVisibility() != View.GONE) 
+ 					child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
  			}
 
 
@@ -1467,17 +1477,18 @@ public class DragableSpace1 extends ViewGroup
  				child = getChildAt(row, col);
  				childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  				childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 				thisChildLeft = getChildAt(row, col+1).getLeft() - (childWidth - (int)(scaleRatio * mAdapter.getOverlapWithNextX(child, col, row)));
+ 				thisChildLeft = getChildAt(row, col+1).getLeft() - (childWidth - mAdapter.getOverlapWithNextX(child, col, row));
  				//thisChildLeft=Math.max(0, thisChildLeft);
  				//thisChildTop=Math.max(0, thisChildTop);
- 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 				if (child.getVisibility() != View.GONE) 
+ 					child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
  			}
  			
  		    col = mCurrentCol;
  			child = getChildAt(row, col);
  			childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  			childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 		    thisChildTop = child.getTop() - (childHeight - (int)(scaleRatio * mAdapter.getOverlapWithPrevY(child, col, row)));
+ 		    thisChildTop = child.getTop() - (childHeight - mAdapter.getOverlapWithPrevY(child, col, row));
  		    thisChildLeft = (int) (child.getLeft());
  		}
  		
@@ -1486,7 +1497,7 @@ public class DragableSpace1 extends ViewGroup
  		col = mCurrentCol;
  		child = getChildAt(row, col);
  		childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 		thisChildTop = child.getTop() + (childHeight - (int)(scaleRatio * mAdapter.getOverlapWithNextY(child, col, row)));
+ 		thisChildTop = child.getTop() + (childHeight - mAdapter.getOverlapWithNextY(child, col, row));
  		thisChildLeft = child.getLeft();
  		for(row=mCurrentRow+1; row <= mRowEnd; row++) {
  			child = getChildAt(row, col);
@@ -1494,7 +1505,8 @@ public class DragableSpace1 extends ViewGroup
  			childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
  			//thisChildLeft=Math.max(0, thisChildLeft);
  			//thisChildTop=Math.max(0, thisChildTop);
- 			child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 			if (child.getVisibility() != View.GONE) 
+ 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
 
  			col = mCurrentCol+1;
  			thisChildLeft=0;
@@ -1504,10 +1516,11 @@ public class DragableSpace1 extends ViewGroup
  				childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  				childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
  				thisChildLeft = getChildAt(row, col-1).getLeft() +
- 						(childWidth - (int)(scaleRatio * mAdapter.getOverlapWithPrevX(child, col, row)));
+ 						(childWidth - mAdapter.getOverlapWithPrevX(child, col, row));
  				//thisChildLeft=Math.max(0, thisChildLeft);
  				//thisChildTop=Math.max(0, thisChildTop);
- 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 				if (child.getVisibility() != View.GONE) 
+ 					child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
  			}
 
 
@@ -1516,17 +1529,18 @@ public class DragableSpace1 extends ViewGroup
  				child = getChildAt(row, col);
  				childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  				childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 				thisChildLeft = getChildAt(row, col+1).getLeft() - (childWidth - (int)(scaleRatio * mAdapter.getOverlapWithNextX(child, col, row)));
+ 				thisChildLeft = getChildAt(row, col+1).getLeft() - (childWidth - mAdapter.getOverlapWithNextX(child, col, row));
  				//thisChildLeft=Math.max(0, thisChildLeft);
  				//thisChildTop=Math.max(0, thisChildTop);
- 				child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
+ 				if (child.getVisibility() != View.GONE) 
+ 					child.layout(thisChildLeft, thisChildTop, thisChildLeft+childWidth, thisChildTop+childHeight);
  			}
  			
  		    col = mCurrentCol;
  			child = getChildAt(row, col);
  			childWidth = (int) (child.getMeasuredWidth()); //* scaleRatio);
  			childHeight = (int) (child.getMeasuredHeight()); //* scaleRatio);
- 		    thisChildTop = child.getTop() + (childHeight - (int)(scaleRatio * mAdapter.getOverlapWithNextY(child, col, row)));
+ 		    thisChildTop = child.getTop() + (childHeight - mAdapter.getOverlapWithNextY(child, col, row));
  		    thisChildLeft = (int) (child.getLeft());
  		}
 
@@ -1680,8 +1694,11 @@ public class DragableSpace1 extends ViewGroup
 		    for (int column = 0; column < mNumColumns; column++) {
 		    	final int childIndex = row * mNumColumns + column;
 		    	View child = this.getChildAt(childIndex);
-		    	if (child != null)
+		    	if (child != null) {
                     child.measure(widthMeasureSpec, heightMeasureSpec);
+			        //child.setDrawingCacheEnabled(true);
+			        //child.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_LOW);
+		    	}
                 
 				//Log.d(LOG_TAG, childIndex+":MeasureSpec=("+widthMeasureSpec+","+heightMeasureSpec+")");
 				//Log.d(LOG_TAG, childIndex+":MeasureSpec height="+MeasureSpec.getSize(heightMeasureSpec));
@@ -1695,6 +1712,13 @@ public class DragableSpace1 extends ViewGroup
     }  
     
 
+    private class RemoveViewsTask extends AsyncTask<Void, Void, Void> {
+        protected Void doInBackground(Void...voids) {
+        	removeAllViewsInLayout();
+			return null;
+        }
+    }
+    
     boolean populate(int posx, int posy) {
 		Log.d(TAG, "populate(posx="+posx+",posy="+posy+")");
    		SparseArray<View> viewRow;
@@ -1716,12 +1740,14 @@ public class DragableSpace1 extends ViewGroup
    		    (rowEnd == oldRowEnd) &&
    		    (colEnd == oldColEnd))
    			return false;
-     	//this.removeAllViews();
+   		//new RemoveViewsTask().execute((Void[]) null);
      	this.removeAllViewsInLayout();
+
+   		Log.d(TAG,"insert new items");
     	for (row=rowBegin; row<=rowEnd; row++){
     		viewRow = views.get(row);
     		if (viewRow == null) {
-    			viewRow = new SparseArray<View>(10);
+    			viewRow = new SparseArray<View>(6);
     		    views.put(row, viewRow);
     		}
     	    for (col=colBegin; col<=colEnd; col++){
@@ -1733,6 +1759,7 @@ public class DragableSpace1 extends ViewGroup
     	}
     	
    		
+   		Log.d(TAG,"delete old items");
    		if (oldRowBegin < rowBegin) {
    			for (row=oldRowBegin; row< rowBegin; row++){
    				viewRow = views.get(row);
@@ -1791,19 +1818,21 @@ public class DragableSpace1 extends ViewGroup
      	int ii=0,jj=0;
     	for (ii=0,row=rowBegin; row<=rowEnd; ii++, row++){
     		viewRow = views.get(row);
-    		if (viewRow == null) {
-    			Log.wtf(TAG, "--This should never happen!!");
+    		if (viewRow != null) {
+    			for (jj=0,col=colBegin; col<=colEnd; col++,jj++){
+    				View v = viewRow.get(col);
+    				if (v != null){
+    					addViewInLayout(v,ii, jj);
+    				} else {
+    					Log.wtf(TAG, "..This should never happen!!");
+    				}
+    				if (posx==col && posy==row) {
+    					//TODO: anything special for the centerView
+    				}
+    			}
     		}
-    	    for (jj=0,col=colBegin; col<=colEnd; col++,jj++){
-   	    		View v = viewRow.get(col);
-    	    	if (v == null){
-    			    Log.wtf(TAG, "..This should never happen!!");
-    	    	} else {
-   	    		    addViewInLayout(v,ii, jj);
-    	    	}
-    	    	if (posx==col && posy==row) {
-    	    		//TODO: anything special for the centerView
-    	    	}
+    		else {
+    			Log.wtf(TAG, "--This should never happen!!");
     	    }
     	}
     	
@@ -1837,11 +1866,11 @@ public class DragableSpace1 extends ViewGroup
    			overlapYRow = overlapYs.get(row);
    			overlapXRow = overlapXs.get(row);
     		if (overlapYRow == null) {
-    			overlapYRow = new SparseIntArray (10);
+    			overlapYRow = new SparseIntArray (6);
     		    overlapYs.put(row, overlapYRow);
     		}
     		if (overlapXRow == null) {
-    			overlapXRow = new SparseIntArray (10);
+    			overlapXRow = new SparseIntArray (6);
     		    overlapXs.put(row, overlapXRow);
     		}
  
