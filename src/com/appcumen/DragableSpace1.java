@@ -3,8 +3,10 @@ package com.appcumen;
 
 import com.appcumen.adapters.BigPageAdapter;
 import com.appcumen.listeners.PageChangeListener;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.graphics.Bitmap;
@@ -179,7 +181,8 @@ public class DragableSpace1 extends ViewGroup
     private final static int TOUCH_STATE_SCROLLING = 1;
     private static int OVERSHOOT_AMOUNT = 57;
     private static final int MARGIN = 8;
-    private static final int MAX_SETTLE_DURATION = 900; // ms
+    private static final int MAX_SETTLE_DURATION = 800; // ms
+    private static final int MIN_SETTLE_DURATION = 400; // ms
     private static final int SIDE_BUFFER_COUNT = 2;
     private static final float MINIMUM_SCALE_RATIO = 0.69f;
     private static final float MAXIMUM_SCALE_RATIO = 1.92f;
@@ -328,7 +331,7 @@ public class DragableSpace1 extends ViewGroup
 	        	mSideBufferY = SIDE_BUFFER_COUNT;
 	        	calculateRowsAndCols(mCurrentCol, mCurrentRow);
 	        	updateBoundaries(mCurrentRow, mCurrentCol);
-	        	if (populate(mCurrentCol, mCurrentRow))
+	        	if (populate_new(mCurrentCol, mCurrentRow, true))
 	        		requestLayout();
 	        }
     	}
@@ -409,13 +412,16 @@ public class DragableSpace1 extends ViewGroup
         initializeViews(context);
     }
  
-    private void initializeViews(Context context) {
+    @SuppressLint("NewApi")
+	private void initializeViews(Context context) {
         Log.d(TAG, "initializeViews");
         calculateRowsAndCols(mCurrentCol, mCurrentRow);
        	updateBoundaries(mCurrentRow, mCurrentCol);
        	//Bitmap mBackground = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.green_drops1);
 		//LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mScroller = new Scroller(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
+        	mScroller.setFriction(3.0f);
 		bms = new Bitmap[9];
 		
         mTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
@@ -479,7 +485,7 @@ public class DragableSpace1 extends ViewGroup
         	return;
 		
         calculateRowsAndCols(posx, posy);
-		if (populate(posx, posy)) {
+		if (populate_new(posx, posy,true)) {
 			//updateBoundaries has to be called after populate and before requestLayout();
 			updateBoundaries(posy, posx);
 			requestLayout();
@@ -590,7 +596,7 @@ public class DragableSpace1 extends ViewGroup
 		mVelocityTracker.addMovement(ev);
 		
 		final int action = ev.getAction();
-        //Log.i(TAG, "onTouchIntercept:event:"+action+", touchState:" + mTouchState);
+        Log.i(TAG, "onTouchIntercept:event:"+action+", touchState:" + mTouchState);
 		if ((action == MotionEvent.ACTION_MOVE) && (mTouchState != TOUCH_STATE_REST)) {
             Log.d(TAG, "event-move, touchState != REST");
 			return true;
@@ -608,6 +614,10 @@ public class DragableSpace1 extends ViewGroup
 			 */
 			if (!mScroller.isFinished()) {
 				mScroller.abortAnimation();
+				//mScroller.forceFinished(true);
+				Log.i(TAG, "abort mScroller");
+				layoutPending = populate_new(mCurrentCol, mCurrentRow, true);
+				layout_real();
 			}
 
 			// Remember location of down touch
@@ -660,7 +670,7 @@ public class DragableSpace1 extends ViewGroup
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        //Log.i(TAG, "onTouchEvent:event:"+ ev);
+        //Log.i(TAG, "onTouchEvent:event:"+ ev.getAction());
         //Log.i(TAG, "onTouchEvent");
     	boolean needsInvalidate = false;
         if (mVelocityTracker == null) {
@@ -681,7 +691,8 @@ public class DragableSpace1 extends ViewGroup
                  * will be false if being flinged.
                  */
                 if (!mScroller.isFinished()) {
-                    mScroller.abortAnimation();
+                    //mScroller.abortAnimation();
+                    mScroller.forceFinished(true);
                 }
  
         		if (mChangeListener != null) {
@@ -766,7 +777,7 @@ public class DragableSpace1 extends ViewGroup
                 //Log.i(LOG_TAG, "event:up. newPosition="+newRow+","+newColumn);
                 
         		calculateRowsAndCols(newColumn, newRow);
-        		layoutPending = populate(newColumn, newRow);
+        		//layoutPending = populate_new(newColumn, newRow);
                 needsInvalidate = snapToScreen(newRow, newColumn, velocityX, velocityY);
                 
         		if (!needsInvalidate && mChangeListener != null) {
@@ -906,7 +917,8 @@ public class DragableSpace1 extends ViewGroup
                  * will be false if being flinged.
                  */
                 if (!mScroller.isFinished()) {
-                    mScroller.abortAnimation();
+                    //mScroller.abortAnimation();
+                    mScroller.forceFinished(true);
                 }
  
         		if (mChangeListener != null) {
@@ -1130,6 +1142,9 @@ public class DragableSpace1 extends ViewGroup
         durationX = Math.min(durationX, MAX_SETTLE_DURATION);
         durationY = Math.min(durationY, MAX_SETTLE_DURATION);
         
+        durationX = Math.max(durationX, MIN_SETTLE_DURATION);
+        durationY = Math.max(durationY, MIN_SETTLE_DURATION);
+
         int duration = durationX;
         if (durationY > duration)
         	duration = durationY;
@@ -1141,6 +1156,7 @@ public class DragableSpace1 extends ViewGroup
          return snapToScreen_new(row, column, velocityX, velocityY);
     }
     
+    /*
     private boolean snapToScreen_old(int row, int column, int velocityX, int velocityY) {        
     	boolean needsInvalidate=false;
         Log.i(TAG, "snapToScreen_old-" + row + "," + column);
@@ -1182,9 +1198,10 @@ public class DragableSpace1 extends ViewGroup
         return needsInvalidate;
     }
  
+ */
  private boolean snapToScreen_new(int row, int column, int velocityX, int velocityY) {        
     	boolean needsInvalidate=false;
-        Log.i(TAG, "snapToScreen_new-" + row + "," + column);
+        Log.i(TAG, "snapToScreen_new-" + row + "," + column +"  velocity="+velocityX+","+velocityY);
         //showLayout();
         
         if (mFirstLayout) {
@@ -1226,24 +1243,27 @@ public class DragableSpace1 extends ViewGroup
         return needsInvalidate;
     }
  
-
  
-    int printCounter=0;
     @Override
     public void computeScroll() {
+    	computeScroll_new();
+    }
+
+    public void computeScroll_new() {
      	//Log.i(TAG, "computeScroll()");
         if (mScroller.computeScrollOffset()) {
-       		//views.get(mCurrentRow).get(mCurrentCol).bringToFront();
-       		//if (views.get(mCurrentRow).get(mCurrentCol-1) != null)
-       			//views.get(mCurrentRow).get(mCurrentCol-1).bringToFront();
-       		//if (views.get(mCurrentRow).get(mCurrentCol+1) != null)
-       			//views.get(mCurrentRow).get(mCurrentCol+1).bringToFront();
             mScrollX = mScroller.getCurrX();
             mScrollY = mScroller.getCurrY();
-            int finalX = mScroller.getFinalX();
-            int finalY = mScroller.getFinalY();
+            final int finalX = mScroller.getFinalX();
+            final int finalY = mScroller.getFinalY();
             //Log.i(TAG, "computeScroll()--mScroll=" + mScrollX + "," + mScrollY+" final=" + finalX + "," + finalY);
-            if ((finalX == mScrollX) && (finalY == mScrollY)) {
+            final int diffX = Math.abs(finalX - mScrollX);
+            final int diffY = Math.abs(finalY - mScrollY);
+            if ((diffX<=15) && (diffY<=15)) {
+        		layoutPending = populate_new(mCurrentCol, mCurrentRow, true);
+            }
+            //snap the last two pixels
+            if ((diffX<=5) && (diffY<=5)) {
                 scrollTo(finalX, finalY);
         		//mScroller.forceFinished(true);
         		mScroller.abortAnimation();
@@ -1253,7 +1273,45 @@ public class DragableSpace1 extends ViewGroup
         			mChangeListener.onScrollEnd();
         			mChangeListener.onSwitched(mCurrentCol, mCurrentRow);
         		}
+                if (layoutPending) {
+                    //Log.i(TAG, "computeScroll() requesting layout");
+                	layoutPending = false;
+                    this.requestLayout();
+                }
+            }
+            else {
+                 scrollTo(mScrollX, mScrollY);
+                 invalidate();
+            }
+	    } else  {
+	    	//Log.i(TAG, "point 1");
+	    	//mScroller.forceFinished(true);
+	    	mScroller.abortAnimation();
+	    }
+        //showLayout();
+    }
+
+ 
+    int printCounter=0;
+    public void computeScroll_old() {
+     	//Log.i(TAG, "computeScroll()");
+        if (mScroller.computeScrollOffset()) {
+            mScrollX = mScroller.getCurrX();
+            mScrollY = mScroller.getCurrY();
+            int finalX = mScroller.getFinalX();
+            int finalY = mScroller.getFinalY();
+            //Log.i(TAG, "computeScroll()--mScroll=" + mScrollX + "," + mScrollY+" final=" + finalX + "," + finalY);
+            if ((finalX == mScrollX) && (finalY == mScrollY)) {
+                scrollTo(finalX, finalY);
+        		mScroller.forceFinished(true);
+        		//views.get(mCurrentRow).get(mCurrentColumn).setVisibility(View.VISIBLE);
+        		//views.get(mCurrentRow+1).get(mCurrentColumn).setVisibility(View.INVISIBLE);
+        		if (mChangeListener != null) {
+        			mChangeListener.onScrollEnd();
+        			mChangeListener.onSwitched(mCurrentCol, mCurrentRow);
+        		}
                 printCounter=0;
+        		layoutPending = populate_new(mCurrentCol, mCurrentRow, true);
                 if (layoutPending) {
                     //Log.i(TAG, "computeScroll() requesting layout");
                 	layoutPending = false;
@@ -1271,8 +1329,8 @@ public class DragableSpace1 extends ViewGroup
         	if (printCounter > 0){
         		printCounter--;
         		Log.i(TAG, "point 1");
-        		//mScroller.forceFinished(true);
-        		mScroller.abortAnimation();
+        		mScroller.forceFinished(true);
+        		//mScroller.abortAnimation();
         		//views.get(mCurrentRow).get(mCurrentCol).bringToFront();
         		if (mChangeListener != null) {
         			Log.i(TAG, "point 2");
@@ -1359,8 +1417,14 @@ public class DragableSpace1 extends ViewGroup
 
 	private boolean mFirstLayout = true;
     @Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b) {
-    	 onLayout_new(changed, l, t, r, b);
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+ 		Log.d(TAG, "onLayout(changed="+changed+",l="+left+",t="+top+",r="+right+",b="+bottom);
+ 		layout_real();
+ 		if ((changed || mFirstLayout) && !this.currentlyZooming) {
+ 			mFirstLayout = false;
+ 			this.snapToScreen();
+ 		}
+ 		//showLayout();
     }
     
     protected void onLayout_old(boolean changed, int l, int t, int r, int b) {
@@ -1434,10 +1498,7 @@ public class DragableSpace1 extends ViewGroup
 		}
     }
     
-    protected void onLayout_new(boolean changed, int l, int t, int r, int b) {
- 		//Log.d(TAG, "onLayout(changed="+changed+",l="+l+",t="+t+",r="+r+",b="+b);
-         
- 	    
+    private void layout_real() {
  		int childWidth;
  		int childHeight;
  		View child;
@@ -1544,12 +1605,8 @@ public class DragableSpace1 extends ViewGroup
  		    thisChildLeft = (int) (child.getLeft());
  		}
 
- 		if ((changed || mFirstLayout) && !this.currentlyZooming) {
- 			mFirstLayout = false;
- 			this.snapToScreen();
- 		}
- 		//showLayout();
-     }
+    }
+   
     
     
     protected void onLayout_new1(boolean changed, int l, int t, int r, int b) {
@@ -1713,11 +1770,170 @@ public class DragableSpace1 extends ViewGroup
     
 
     private class RemoveViewsTask extends AsyncTask<Void, Void, Void> {
-        protected Void doInBackground(Void...voids) {
+    	int waitingThreads = 0;
+    	boolean done = false;
+        @Override
+        protected synchronized Void doInBackground(Void...voids) {
         	removeAllViewsInLayout();
+        	done = true;
+        	if (waitingThreads > 0)
+        		this.notifyAll();
 			return null;
         }
+        public synchronized void waitForFinish() throws InterruptedException {
+        	if (!done) {
+        		waitingThreads++;
+        		wait();
+        	}
+        }
     }
+    
+    @SuppressLint("NewApi")
+	boolean populate_new(int posx, int posy, boolean background) {
+		Log.d(TAG, "populate_new(posx="+posx+",posy="+posy+")");
+  		
+		final RemoveViewsTask rmTask = new RemoveViewsTask();
+		if (background) {
+			if (android.os.Build.VERSION.SDK_INT  <= 10 ) {
+				rmTask.execute((Void[]) null);
+			}
+			else  {
+				//Log.d(TAG,"SDK_INT > 10");
+				rmTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void[]) null);
+			}
+		} else 
+			this.removeAllViewsInLayout();
+
+    	boolean modified = false;
+   		
+   		final int rowBegin = Math.max(posy - mSideBufferY, 0);
+   		final int rowEnd = Math.min(posy + mSideBufferY, mAdapter.getRowCount()-1);
+   		final int colBegin = Math.max(posx - mSideBufferX, 0);
+   		final int colEnd = Math.min(posx + mSideBufferX, mAdapter.getColCount()-1);
+   		int col, row;
+   		
+   		Log.d(TAG,"new values="+rowBegin+","+rowEnd+"-"+colBegin+","+colEnd);
+ 
+
+   		Log.d(TAG,"insert new items");
+    	for (row=rowBegin; row<=rowEnd; row++){
+    		SparseArray<View> viewRow = views.get(row);
+    		if (viewRow == null) {
+    			modified = true;
+    			viewRow = new SparseArray<View>(6);
+    		    views.put(row, viewRow);
+    		}
+    	    for (col=colBegin; col<=colEnd; col++){
+    	    	if (viewRow.get(col) == null){
+    	    		modified = true;
+    	    		View v = mAdapter.instantiateItem(col, row, this);
+    	    		viewRow.put(col, v);
+    	    	}
+    	    }
+    	}
+    	
+   		
+     	for (row=rowBegin-mSideBufferY; row<rowBegin; row++){
+    		final SparseArray<View> viewRow = views.get(row);
+    		if (viewRow == null) {
+    			continue;
+    		}
+    		else {
+    			modified = true;
+    			//delete all columns for the row
+    	        for (col=colBegin - mSideBufferX; col<=colEnd+mSideBufferX; col++){
+    	    	    if (viewRow.get(col) != null){
+    	        	    mAdapter.destroyItem(viewRow.get(col),col, row, this);
+    	    		    //viewRow.put(col, null);
+    	    		    viewRow.delete(col);
+    	    	    }
+    	        }
+    	        //delete the row
+    	        views.delete(row);
+    	    }
+    	}
+     	
+    	for (row=rowEnd+1; row<=rowEnd+mSideBufferY; row++){
+    		final SparseArray<View> viewRow = views.get(row);
+    		if (viewRow == null) {
+    			continue;
+    		}
+    		else {
+    			modified = true;
+    			//delete all columns for the row
+    	        for (col=colBegin - mSideBufferX; col<=colEnd+mSideBufferX; col++){
+    	    	    if (viewRow.get(col) != null){
+    	        	    mAdapter.destroyItem(viewRow.get(col),col, row, this);
+    	    		    //viewRow.put(col, null);
+    	    		    viewRow.delete(col);
+    	    	    }
+    	        }
+    	        //delete the row
+    	        views.delete(row);
+    	    }
+    	}
+     	
+	
+    	for (row=rowBegin; row<=rowEnd; row++){
+    		final SparseArray<View> viewRow = views.get(row);
+    		if (viewRow != null) {
+    			//delete old columns for the row
+    	        for (col=colBegin - mSideBufferX; col<colBegin; col++){
+    	    	    if (viewRow.get(col) != null){
+    	    	    	modified = true;
+    	        	    mAdapter.destroyItem(viewRow.get(col),col, row, this);
+    	    		    //viewRow.put(col, null);
+    	    		    viewRow.delete(col);
+    	    	    }
+    	        }
+    	        for (col=colEnd+1; col<colEnd+mSideBufferX; col++){
+    	    	    if (viewRow.get(col) != null){
+    	    	    	modified = true;
+    	        	    mAdapter.destroyItem(viewRow.get(col),col, row, this);
+    	    		    //viewRow.put(col, null);
+    	    		    viewRow.delete(col);
+    	    	    }
+    	        }
+    	    }
+    		else {
+    			Log.wtf(TAG, "..This should never happen!!");
+    		}
+    	}
+     	
+    	try {
+    		if (background) 
+    			rmTask.waitForFinish();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+     	int ii=0,jj=0;
+    	for (ii=0,row=rowBegin; row<=rowEnd; ii++, row++){
+    		final SparseArray<View> viewRow = views.get(row);
+    		if (viewRow != null) {
+    			for (jj=0,col=colBegin; col<=colEnd; col++,jj++){
+    				final View v = viewRow.get(col);
+    				if (v != null){
+    					addViewInLayout(v,ii, jj);
+    				} else {
+    					Log.wtf(TAG, "..This should never happen!!");
+    				}
+    				if (posx==col && posy==row) {
+    					//TODO: anything special for the centerView
+    				}
+    			}
+    		}
+    		else {
+    			Log.wtf(TAG, "--This should never happen!!");
+    	    }
+    	}
+    	
+    	//showLayout();
+		Log.d(TAG, "modified="+modified);
+ 
+    	return modified;
+    }
+    
     
     boolean populate(int posx, int posy) {
 		Log.d(TAG, "populate(posx="+posx+",posy="+posy+")");
