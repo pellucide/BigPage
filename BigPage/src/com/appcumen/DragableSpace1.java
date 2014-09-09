@@ -440,7 +440,7 @@ public class DragableSpace1 extends ViewGroup
     }
     
     private void updateBoundaries(int row, int col) {
-        Log.d(TAG, "updateBoundaries()");
+        Log.d(TAG, "updateBoundaries(row="+row+",col="+col+")");
     	if (mAdapter != null) {
     		int leftCount = Math.min(col, mSideBufferX);
     		int rightCount = Math.min(mAdapter.getColCount() - col-1, mSideBufferX);
@@ -1263,7 +1263,7 @@ public class DragableSpace1 extends ViewGroup
         		layoutPending = populate_new(mCurrentCol, mCurrentRow, true);
             }
             //snap the last two pixels
-            if ((diffX<=5) && (diffY<=5)) {
+            if ((diffX<=2) && (diffY<=2)) {
                 scrollTo(finalX, finalY);
         		//mScroller.forceFinished(true);
         		mScroller.abortAnimation();
@@ -1507,6 +1507,7 @@ public class DragableSpace1 extends ViewGroup
  		//int thisChildTop = (int) (row * getHeight() * scaleRatio) ;
  		//int thisChildLeft = (int) (col * getWidth() * scaleRatio) ;
  		
+ 		Log.d(TAG, "layout_real:getChildAt(row="+row+",col="+col+")");
 		child = getChildAt(row, col);
  		int thisChildTop = child.getTop();
  		int thisChildLeft = child.getLeft();
@@ -2262,10 +2263,11 @@ public class DragableSpace1 extends ViewGroup
      */
     @Override
     protected Parcelable onSaveInstanceState() {
-      final SavedState state = new SavedState(super.onSaveInstanceState());
-      state.currentRow = mCurrentRow;
-      state.currentColumn = mCurrentCol;
-      return state;
+    	Log.d(TAG,"onSaveInstanceState:Current="+mCurrentRow+","+mCurrentCol);
+    	final SavedState state = new SavedState(super.onSaveInstanceState());
+    	state.currentRow = mCurrentRow;
+    	state.currentColumn = mCurrentCol;
+    	return state;
     }
  
 
@@ -2275,14 +2277,16 @@ public class DragableSpace1 extends ViewGroup
      */
     @Override
     protected void onRestoreInstanceState(Parcelable state) {
-      SavedState savedState = (SavedState) state;
-      super.onRestoreInstanceState(savedState.getSuperState());
-      if (savedState.currentRow != -1) {
-        mCurrentRow = savedState.currentRow;
-      }
-      if (savedState.currentColumn != -1) {
-        mCurrentCol = savedState.currentColumn;
-      }
+    	Log.d(TAG,"onRestoreInstanceState:Current="+mCurrentRow+","+mCurrentCol);
+    	SavedState savedState = (SavedState) state;
+    	super.onRestoreInstanceState(savedState.getSuperState());
+    	if (savedState.currentRow != -1) {
+    		mCurrentRow = savedState.currentRow;
+    	}
+    	if (savedState.currentColumn != -1) {
+    		mCurrentCol = savedState.currentColumn;
+    	}
+    	setCurrentItem(mCurrentCol, mCurrentRow);
     }
  
     // ========================= INNER CLASSES ==============================
