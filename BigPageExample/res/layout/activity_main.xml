@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/bigpage"         android:layout_width="fill_parent"
+              android:layout_height="fill_parent" android:orientation="vertical" >
+
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:background="@drawable/blue_bg"
+    android:id="@+id/tile"
+    android:layout_height="match_parent" >
+
+    <RelativeLayout
+        android:id="@+id/topspace"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true" >
+
+        <TextView
+            android:id="@+id/textView1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true"
+            android:gravity="left|center_vertical"
+            android:paddingBottom="3dp"
+            android:paddingLeft="19dp"
+            android:paddingRight="9dp"
+            android:paddingTop="3dp"
+            android:shadowColor="#ff222222"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="0.1"
+            android:text="July"
+            android:textColor="@android:color/white"
+            android:textSize="19dp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/addbutton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:text="Add event"
+            tools:context=".MainActivity" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentRight="true"
+            android:gravity="right|center_vertical"
+            android:paddingBottom="3dp"
+            android:paddingLeft="9dp"
+            android:paddingRight="19dp"
+            android:paddingTop="3dp"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="0.1"
+            android:text="+"
+            android:textColor="@android:color/white"
+            android:textSize="39dp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
+
+    <View android:layout_width="fill_parent"
+        android:layout_height="30dp"
+        android:background="@drawable/ribbon"
+        android:layout_below="@id/topspace"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="hello world"
+        tools:context=".MainActivity" />
+
+</RelativeLayout>
+</LinearLayout>
